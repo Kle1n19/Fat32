@@ -61,6 +61,7 @@ void print_file_info(const string& path, const string& name, uint32_t size, bool
     cout << path << (path.empty() ? "" : "/") << name << (is_directory ? "/" : "") 
          << " (Size: " << size << " bytes, Type: " 
          << (is_directory ? "Directory" : "File") << ")" << endl;
+}
 void read_directory(ifstream& file, const FAT16& fat, uint16_t cluster, const string& path) {
     uint32_t sector = cluster == 0 
                         ? fat.root_dir_start 
