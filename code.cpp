@@ -61,13 +61,17 @@ void print_file_info(const string& path, const string& name, uint32_t size, bool
     cout << path << (path.empty() ? "" : "/") << name << (is_directory ? "/" : "") 
          << " (Size: " << size << " bytes, Type: " 
          << (is_directory ? "Directory" : "File") << ")" << endl;
-}
-
 void read_directory(ifstream& file, const FAT16& fat, uint16_t cluster, const string& path) {
-    uint32_t sector = fat.cluster_to_sector(cluster);
-    file.seekg(sector * fat.sector_size, ios::beg);
+    uint32_t sector = cluster == 0 
+                        ? fat.root_dir_start 
+                        : fat.cluster_to_sector(cluster);
+    uint32_t max_entries = cluster == 0 
+                             ? fat.root_entries 
+                             : fat.sector_size * fat.sectors_per_cluster / 32;
 
-    while (true) {
+    for (uint32_t i = 0; i < max_entries; ++i) {
+        file.seekg(sector * fat.sector_size + i * 32, ios::beg);
+
         char entry[32];
         file.read(entry, sizeof(entry));
         if (entry[0] == 0x00) break;
@@ -83,12 +87,19 @@ void read_directory(ifstream& file, const FAT16& fat, uint16_t cluster, const st
         ext.erase(ext.find_last_not_of(' ') + 1);
         string full_name = name + (ext.empty() ? "" : "." + ext);
         bool is_directory = attributes & 0x10;
+
         print_file_info(path, full_name, file_size, is_directory);
+
         if (is_directory && full_name != "." && full_name != "..") {
-            read_directory(file, fat, start_cluster, path + "/" + full_name);
+            uint16_t next_cluster = start_cluster;
+            while (next_cluster < 0xFFF8) { // FAT16 cluster chain ends at 0xFFF8
+                read_directory(file, fat, next_cluster, path + "/" + full_name);
+                next_cluster = fat.get_next_cluster(next_cluster);
+            }
         }
     }
 }
+
 void read_fat16_image(const string& image_path) {
     ifstream file(image_path, ios::binary);
     if (!file) {
