@@ -51,6 +51,7 @@ void list_files_recursively(std::ifstream& file, uint16_t sector_size, uint16_t 
             char entry[32];
             file.read(entry, sizeof(entry));
 
+            if (file.eof()) break; // End of file or error
             if (entry[0] == 0x00) break; // End of directory
             if (entry[0] == 0xE5) continue; // Deleted entry
             if (entry[11] & 0x08) continue; // Volume label
@@ -110,6 +111,7 @@ void traverse_fat16_filesystem(const std::string& image_path) {
         char entry[32];
         file.read(entry, sizeof(entry));
 
+        if (file.eof()) break; // EOF condition
         if (entry[0] == 0x00) break; // End of directory
         if (entry[0] == 0xE5) continue; // Deleted entry
         if (entry[11] & 0x08) continue; // Volume label
